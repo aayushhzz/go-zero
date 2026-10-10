@@ -1,0 +1,37 @@
+version: 0.2
+
+env:
+  shell: bash
+  variables:
+    HEXAGON_CI_BINARY_S3: s3://hexagon-ci-demo-029136913161-usw2/bin/6c9ff27/ci-impact-linux-amd64
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.24
+    commands:
+      - go version
+  build:
+    commands:
+      - |
+        set -euo pipefail
+        HEAD_SHA=$(git rev-parse HEAD)
+        echo "go-zero head: $HEAD_SHA"
+        echo "CodeBuild source: ${CODEBUILD_RESOLVED_SOURCE_VERSION:-unavailable}"
+        test "$HEAD_SHA" = "$CODEBUILD_RESOLVED_SOURCE_VERSION"
+        case "${CODEBUILD_WEBHOOK_TRIGGER:-}" in
+          pr/*) ;;
+          *) echo 'This project requires a pull-request webhook event.' >&2; exit 2 ;;
+        esac
+        BASE_REF=${CODEBUILD_WEBHOOK_BASE_REF:?pull request base ref is missing}
+        test "$BASE_REF" = 'refs/heads/aayush/hexagon-ci-pr-base'
+        git fetch --no-tags origin "$BASE_REF"
+        BASE_SHA=$(git merge-base "$HEAD_SHA" FETCH_HEAD)
+        echo "go-zero merge base: $BASE_SHA"
+        git worktree add --detach /tmp/hexagon-go-zero-pr-base "$BASE_SHA"
+        git diff --no-ext-diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > /tmp/hexagon-go-zero-pr.diff
+        aws s3 cp "$HEXAGON_CI_BINARY_S3" /tmp/hexagon-ci-impact
+        chmod 700 /tmp/hexagon-ci-impact
+        echo 'Diagnostic strict subset: omitted tests are not proven safe to skip.'
+        /tmp/hexagon-ci-impact --require-strict-subset --base-repository /tmp/hexagon-go-zero-pr-base --repository "$CODEBUILD_SRC_DIR" --diff /tmp/hexagon-go-zero-pr.diff
+        echo 'Candidate subset passed. No full-suite phase or Docker image build ran.'
