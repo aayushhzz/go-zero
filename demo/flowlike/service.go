@@ -41,7 +41,12 @@ func (s *Service) Handler() http.Handler {
 		var request struct {
 			Name string `json:"name"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil || strings.TrimSpace(request.Name) == "" {
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, "name is required", http.StatusBadRequest)
+			return
+		}
+		request.Name = strings.TrimSpace(request.Name)
+		if request.Name == "" {
 			http.Error(w, "name is required", http.StatusBadRequest)
 			return
 		}

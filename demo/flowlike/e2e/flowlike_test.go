@@ -19,7 +19,7 @@ func TestFlowlikeE2E(t *testing.T) {
 		t.Skip("requires the isolated Flow-like CodeBuild stack")
 	}
 	client := &http.Client{Timeout: 5 * time.Second}
-	request, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:8099/jobs", bytes.NewBufferString(`{"name":"flow-demo"}`))
+	request, err := http.NewRequest(http.MethodPost, "http://127.0.0.1:8099/jobs", bytes.NewBufferString(`{"name":" flow-demo "}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,6 +49,7 @@ func TestFlowlikeE2E(t *testing.T) {
 		}
 		var job struct {
 			Status string `json:"status"`
+			Name   string `json:"name"`
 		}
 		err = json.NewDecoder(get.Body).Decode(&job)
 		get.Body.Close()
@@ -56,7 +57,7 @@ func TestFlowlikeE2E(t *testing.T) {
 			t.Fatal(err)
 		}
 		value, err := redisClient.Get(context.Background(), "flowlike:done:"+created.ID).Result()
-		if job.Status == "done" && err == nil && value == "1" {
+		if job.Status == "done" && job.Name == "flow-demo" && err == nil && value == "1" {
 			return
 		}
 		time.Sleep(200 * time.Millisecond)

@@ -13,6 +13,10 @@ phases:
         set -euo pipefail
         echo "Source: $(git rev-parse HEAD)"
         test "$(git rev-parse HEAD)" = "$CODEBUILD_RESOLVED_SOURCE_VERSION"
+        if [[ -n "${FLOWLIKE_BASE_SHA:-}" ]]; then
+          echo "Changes since ${FLOWLIKE_BASE_SHA}:"
+          git diff --name-only "$FLOWLIKE_BASE_SHA" HEAD
+        fi
         cd demo/flowlike
         docker compose -f compose.yaml up -d --wait --wait-timeout 300
         cleanup() {
@@ -24,6 +28,7 @@ phases:
         }
         trap cleanup EXIT
         cd ../..
+        echo 'Build target: ./demo/flowlike/cmd/flowlike (no application Docker image build)'
         go build -o /tmp/flowlike ./demo/flowlike/cmd/flowlike
         /tmp/flowlike -role worker >/tmp/flowlike-worker.log 2>&1 & worker_pid=$!
         /tmp/flowlike -role api >/tmp/flowlike-api.log 2>&1 & api_pid=$!
