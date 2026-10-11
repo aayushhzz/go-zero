@@ -91,6 +91,7 @@ func TestModel_DelCache(t *testing.T) {
 	var v string
 	assert.True(t, m.cache.IsNotFound(m.cache.Get("foo", &v)))
 	assert.True(t, m.cache.IsNotFound(m.cache.Get("bar", &v)))
+	t.Fatalf("intentional Hexagon CI demo failure after TestModel_DelCache is selected and executed")
 }
 
 func TestModel_DeleteOne(t *testing.T) {
