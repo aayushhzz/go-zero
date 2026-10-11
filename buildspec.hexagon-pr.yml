@@ -4,11 +4,13 @@ env:
   shell: bash
   variables:
     HEXAGON_CI_BINARY_S3: s3://hexagon-ci-demo-029136913161-usw2/bin/6c9ff27/ci-impact-linux-amd64
+    GOMODCACHE: /root/.cache/hexagon-go-zero/mod
+    GOCACHE: /root/.cache/hexagon-go-zero/build
 
 phases:
   install:
     runtime-versions:
-      golang: 1.24
+      golang: 1.25
     commands:
       - go version
   build:
@@ -35,3 +37,9 @@ phases:
         echo 'Diagnostic strict subset: omitted tests are not proven safe to skip.'
         /tmp/hexagon-ci-impact --require-strict-subset --base-repository /tmp/hexagon-go-zero-pr-base --repository "$CODEBUILD_SRC_DIR" --diff /tmp/hexagon-go-zero-pr.diff
         echo 'Candidate subset passed. No full-suite phase or Docker image build ran.'
+
+cache:
+  key: go125-linux-amd64-$(codebuild-hash-files go.mod go.sum)
+  paths:
+    - '/root/.cache/hexagon-go-zero/mod/**/*'
+    - '/root/.cache/hexagon-go-zero/build/**/*'

@@ -73,7 +73,8 @@ func newModel(uri, db, collection string, c cache.Cache) (*Model, error) {
 
 // DelCache deletes the cache with given keys.
 func (mm *Model) DelCache(ctx context.Context, keys ...string) error {
-	return mm.cache.DelCtx(ctx, keys...)
+	err := mm.cache.DelCtx(ctx, keys...)
+	return err
 }
 
 // DeleteOne deletes the document with given filter, and remove it from cache.
