@@ -32,21 +32,6 @@ jobs:
           path: base
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: head/go.mod
-          check-latest: true
-          cache: true
-          cache-dependency-path: head/go.sum
-
-      - name: Install pinned Hexagon helper
-        env:
-          HEXAGON_REV: abc2c7adf6308726ac4a2ac0eb86f319ae86cbd1
-        run: |
-          go install github.com/aayushhzz/hexagon-ci/cmd/ci-impact@"$HEXAGON_REV"
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
       - name: Create zero-context PR diff
         env:
           BASE_REPOSITORY: ${{ github.repository }}
@@ -56,7 +41,45 @@ jobs:
           git -C head fetch --no-tags "https://github.com/${BASE_REPOSITORY}.git" "$BASE_SHA"
           git -C head diff --no-ext-diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > "$RUNNER_TEMP/go-zero-pr.diff"
 
+      - name: Check for Go source or test changes
+        id: go_changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git -C head diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '\.go$' >/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Go source/test changes detected; Hex7CI will plan and run candidate tests."
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No Go source/test changes; Hex7CI candidate execution is skipped."
+            {
+              echo "## Hexagon candidate test selection"
+              echo
+              echo "No Go source or test files changed, so Hex7CI selected **0 candidate roots**."
+              echo "The existing Linux and Windows full-suite checks still run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Go
+        if: steps.go_changes.outputs.changed == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: head/go.mod
+          check-latest: true
+          cache: true
+          cache-dependency-path: head/go.sum
+
+      - name: Install pinned Hexagon helper
+        if: steps.go_changes.outputs.changed == 'true'
+        env:
+          HEXAGON_REV: abc2c7adf6308726ac4a2ac0eb86f319ae86cbd1
+        run: |
+          go install github.com/aayushhzz/hexagon-ci/cmd/ci-impact@"$HEXAGON_REV"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
       - name: List and run selected test roots
+        if: steps.go_changes.outputs.changed == 'true'
         run: |
           ci-impact \
             --repository "$GITHUB_WORKSPACE/head" \
