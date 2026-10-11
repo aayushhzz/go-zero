@@ -13,6 +13,7 @@ phases:
       golang: 1.25
     commands:
       - go version
+      - go env GOMODCACHE GOCACHE
   build:
     commands:
       - |
