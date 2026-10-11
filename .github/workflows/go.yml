@@ -70,6 +70,12 @@ jobs:
       - name: Test
         run: |
           go mod verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go mod download
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go test ./...
+          $testExitCode = $LASTEXITCODE
           cd tools/goctl && go build -v goctl.go
+          $buildExitCode = $LASTEXITCODE
+          if ($testExitCode -ne 0) { exit $testExitCode }
+          exit $buildExitCode
