@@ -32,9 +32,10 @@ phases:
         BASE_SHA=$(git merge-base "$HEAD_SHA" FETCH_HEAD)
         echo "go-zero merge base: $BASE_SHA"
         git worktree add --detach /tmp/hexagon-go-zero-pr-base "$BASE_SHA"
-        git diff --no-ext-diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > /tmp/hexagon-go-zero-pr.diff
+        git diff --no-ext-diff --unified=0 "$BASE_SHA" "$HEAD_SHA" -- '*.go' > /tmp/hexagon-go-zero-pr.diff
         aws s3 cp "$HEXAGON_CI_BINARY_S3" /tmp/hexagon-ci-impact
         chmod 700 /tmp/hexagon-ci-impact
+        echo 'Diagnostic Go-only diff: non-Go config/docs changes are excluded; this is not a production no-missed-tests guarantee.'
         echo 'Diagnostic strict subset: omitted tests are not proven safe to skip.'
         /tmp/hexagon-ci-impact --require-strict-subset --base-repository /tmp/hexagon-go-zero-pr-base --repository "$CODEBUILD_SRC_DIR" --diff /tmp/hexagon-go-zero-pr.diff
         echo 'Candidate subset passed. No full-suite phase or Docker image build ran.'
