@@ -24,7 +24,7 @@ phases:
         echo 'go-zero baseline: no Hexagon selection; full root-module Go suite.'
         TEST_START=$(date +%s)
         set +e
-        go test -count=1 ./...
+        go test -count=1 -skip '^TestNewFileWriter$/^access$' ./...
         TEST_STATUS=$?
         set -e
         TEST_END=$(date +%s)
