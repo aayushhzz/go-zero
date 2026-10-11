@@ -6,7 +6,7 @@
 
 **Architecture:** Keep `aws/codebuild/standard:7.0` and the prebuilt Hexagon binary. Add S3-backed module/compiler cache paths to the fork's PR buildspec, grant cache-prefix S3 access to only the Go Zero CodeBuild role, and set the existing project's cache type to S3. Use a PR with the same `DelCache` demonstration change to exercise the PR webhook and report cold/warm timings.
 
-**Tech Stack:** Go 1.24, Hexagon `ci-impact`, AWS CodeBuild, S3 cache, IAM, GitHub PR.
+**Tech Stack:** Go 1.25, Hexagon `ci-impact`, AWS CodeBuild, S3 cache, IAM, GitHub PR.
 
 **Spec:** `docs/superpowers/specs/2026-10-11-hexagon-go-zero-managed-cache-design.md`
 
@@ -35,18 +35,18 @@
 **Interfaces:** Consumes the CodeBuild S3 cache location `hexagon-ci-demo-029136913161-usw2/cache/go-zero-pr`; produces stable absolute Go cache paths and a cache key reused by PRs with matching `go.mod`/`go.sum`.
 
 - [ ] **Step 1: Confirm the old buildspec has no cache block and the demonstration function returns `mm.cache.DelCtx` directly.** Run `rg -n 'cache:|GOCACHE|GOMODCACHE|func \(mm \*Model\) DelCache' buildspec.hexagon-pr.yml core/stores/monc/cachedmodel.go` and inspect the function body.
-- [ ] **Step 2: Add the minimal buildspec configuration.** Add `GOMODCACHE: /root/.cache/hexagon-go-zero/mod` and `GOCACHE: /root/.cache/hexagon-go-zero/build` under `env.variables`, then append:
+- [ ] **Step 2: Add the minimal buildspec configuration.** Select `golang: 1.25` in the existing managed image; add `GOMODCACHE: /root/.cache/hexagon-go-zero/mod` and `GOCACHE: /root/.cache/hexagon-go-zero/build` under `env.variables`, then append:
 
   ```yaml
   cache:
-    key: go124-linux-amd64-$(codebuild-hash-files go.mod go.sum)
+    key: go125-linux-amd64-$(codebuild-hash-files go.mod go.sum)
     paths:
       - '/root/.cache/hexagon-go-zero/mod/**/*'
       - '/root/.cache/hexagon-go-zero/build/**/*'
   ```
 
   Change only `DelCache` to `err := mm.cache.DelCtx(ctx, keys...); return err` so the PR diff has the same selected roots. Do not change the `ci-impact --require-strict-subset` invocation.
-- [ ] **Step 3: Validate.** Run `/usr/bin/ruby -e 'require "yaml"; YAML.load_file("buildspec.hexagon-pr.yml")'`, `git diff --check`, and `go test -count=1 -run '^TestModel_DelCache$' ./core/stores/monc` with Go 1.24; record outcome and duration separately from downloads.
+- [ ] **Step 3: Validate.** Run `/usr/bin/ruby -e 'require "yaml"; YAML.load_file("buildspec.hexagon-pr.yml")'`, `git diff --check`, and `go test -count=1 -run '^TestModel_DelCache$' ./core/stores/monc` with Go 1.25; record outcome and duration separately from downloads.
 - [ ] **Step 4: Commit with sign-off.** Stage only the buildspec and demonstration source change; commit `ci: cache Go artifacts for Hexagon PR demo`.
 
 ### Task 2: Restrict IAM and enable the managed project cache
