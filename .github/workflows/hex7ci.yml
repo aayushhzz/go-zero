@@ -1,0 +1,65 @@
+name: Hex7CI candidate selection
+
+on:
+  pull_request:
+    branches:
+      - master
+      - aayush/hexagon-ci-pr-base
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-tests:
+    name: Hex7CI candidate tests (diagnostic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out PR base
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: head/go.mod
+          check-latest: true
+          cache: true
+          cache-dependency-path: head/go.sum
+
+      - name: Install pinned Hexagon helper
+        env:
+          HEXAGON_REV: abc2c7adf6308726ac4a2ac0eb86f319ae86cbd1
+        run: |
+          go install github.com/aayushhzz/hexagon-ci/cmd/ci-impact@"$HEXAGON_REV"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Create zero-context PR diff
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git -C head fetch --no-tags "https://github.com/${BASE_REPOSITORY}.git" "$BASE_SHA"
+          git -C head diff --no-ext-diff --unified=0 "$BASE_SHA" "$HEAD_SHA" > "$RUNNER_TEMP/go-zero-pr.diff"
+
+      - name: List and run selected test roots
+        run: |
+          ci-impact \
+            --repository "$GITHUB_WORKSPACE/head" \
+            --base-repository "$GITHUB_WORKSPACE/base" \
+            --diff "$RUNNER_TEMP/go-zero-pr.diff" \
+            --summary "$GITHUB_STEP_SUMMARY"
