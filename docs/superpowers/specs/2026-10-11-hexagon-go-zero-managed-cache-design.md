@@ -16,7 +16,7 @@ Only the dedicated Go Zero CodeBuild project and fork buildspec change. Do not c
 
 ## Behavior and validation
 
-On a cache hit, CodeBuild restores dependencies/build artifacts, the selector computes the diff and candidate roots, and Go rebuilds only invalidated package artifacts before running the selected tests. On a cache miss or changed dependencies, Go still compiles/downloads the required dependencies; the job never silently claims file-only compilation. If strict selection fails, the demo build fails rather than expanding to an unreported full suite.
+On a cache hit, CodeBuild restores dependencies/build artifacts, the selector computes the diff and candidate roots, and Go rebuilds only invalidated package artifacts before running the selected tests. Hexagon may still scan repository sources to plan the candidates; caching the Go compiler does not remove that planning work. On a cache miss or changed dependencies, Go still compiles/downloads the required dependencies; the job never silently claims file-only compilation. If strict selection fails, the demo build fails rather than expanding to an unreported full suite.
 
 Validate buildspec syntax and current project settings; verify the cache prefix IAM policy, the unchanged PR webhook, and the effective image/cache settings by readback. Run two equivalent PR builds after cache warm-up, checking cache hit/miss logs, selected roots, passed tests, and separate CodeBuild phases versus selector/test command durations. Compare against the prior no-cache run but report cold/warm and cache transfer overhead separately. Do not claim a percentage improvement until timings are observed. CodeBuild's phase named `build` remains present even though it does not build an image.
 
